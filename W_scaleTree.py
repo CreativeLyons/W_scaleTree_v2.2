@@ -56,6 +56,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
 
         self.ignore = False
         self.nodePositions = {}  # Initialize to prevent AttributeError if scaleTree is called before scanTree
+        self.undo = None  # Initialize to prevent AttributeError if resetSlider is called before scanTree
 
         #--------------------------------------------------------------------------------------------------
         #Sliders
@@ -201,8 +202,11 @@ class scaleTreeWidget(QtWidgets.QWidget):
             if w.isVisible():
                 windowTitle = w.windowTitle()
                 if windowTitle != 'Node Graph':
-                    rootNode = nuke.toNode(windowTitle.split(' ')[0])
-                    break
+                    nodeName = windowTitle.split(' ')[0]
+                    foundNode = nuke.toNode(nodeName)
+                    if foundNode is not None:
+                        rootNode = foundNode
+                        break
 
         return rootNode
 
