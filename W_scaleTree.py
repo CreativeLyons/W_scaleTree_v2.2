@@ -9,11 +9,8 @@ import nuke
 import os
 from nukescripts import panels
 
-#Choose between PySide and PySide2 based on Nuke version
-if nuke.NUKE_VERSION_MAJOR < 11:
-	from PySide import QtCore, QtGui, QtGui as QtWidgets
-else:
-	from PySide2 import QtGui, QtCore, QtWidgets
+#Import Qt classes via compatibility layer (supports PySide6/Qt6 and PySide2/Qt5)
+from qt_compat import QtCore, QtGui, QtWidgets, QAction
 
 #----------------------------------------------------------------------------------------------------------
 #Add to menu.py:
@@ -58,6 +55,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
         #--------------------------------------------------------------------------------------------------
 
         self.ignore = False
+        self.nodePositions = {}  # Initialize to prevent AttributeError if scaleTree is called before scanTree
 
         #--------------------------------------------------------------------------------------------------
         #Sliders
@@ -150,7 +148,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
 
         #quit
         try:
-            self.closeAction = QtWidgets.QAction(self)
+            self.closeAction = QAction(self)
             shortcut = nuke.menu('Nuke').findItem('Edit/Node/W_scaleTree').shortcut()
             self.closeAction.setShortcut(QtGui.QKeySequence().fromString(shortcut))
             self.closeAction.triggered.connect(self.close)
@@ -160,10 +158,10 @@ class scaleTreeWidget(QtWidgets.QWidget):
 
         #corners
 
-        self.setPivotActionTL = QtWidgets.QAction(self)
-        self.setPivotActionTR = QtWidgets.QAction(self)
-        self.setPivotActionBL = QtWidgets.QAction(self)
-        self.setPivotActionBR = QtWidgets.QAction(self)
+        self.setPivotActionTL = QAction(self)
+        self.setPivotActionTR = QAction(self)
+        self.setPivotActionBL = QAction(self)
+        self.setPivotActionBR = QAction(self)
 
         self.setPivotActionTL.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_1))
         self.setPivotActionTR.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_2))
@@ -223,7 +221,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
         Calculate all need information regarding the current selection. Before doing any actual scaling.
         This method is called when the user starts dragging one of the sliders.
         '''
-        
+
 
 
         selection = self.getSelection()
@@ -312,7 +310,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
         This method is called when the user is actually moving one of the sliders.
         '''
 
-        if not self.ignore:
+        if not self.ignore and hasattr(self, 'nodePositions') and self.nodePositions:
 
             multiplier = float(slider.value())/(self.maxSlider/2)
             #make the slider act exponential rather than linear when the value is above 1.
@@ -320,7 +318,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
                 multiplier *= multiplier
 
             for i in self.nodePositions.keys():
-                
+
                 if len(self.nodePositions[i]) == 2:
                 #wehn dealing with a backdrop node, not only adjust the postion but also the scale.
 
@@ -328,12 +326,12 @@ class scaleTreeWidget(QtWidgets.QWidget):
                         screenWidth = i.screenWidth()/2
                         newPos = int((self.pivotX - ((self.pivotX - self.nodePositions[i][0]) * multiplier)) - screenWidth)
                         i.setXpos(newPos)
-    
+
                     if 'vertical' in mode:
                         screenHeight = i.screenHeight()/2
                         newPos = int((self.pivotY - ((self.pivotY - self.nodePositions[i][1]) * multiplier)) - screenHeight)
                         i.setYpos(newPos)
-                
+
                 else:
                     if 'horizontal' in mode:
 
@@ -411,7 +409,7 @@ class scaleTreeWidget(QtWidgets.QWidget):
 
         self.undo.end()
         self.undo = None
-        
+
 #----------------------------------------------------------------------------------------------------------
 
 class pivotWidget(QtWidgets.QGridLayout):
